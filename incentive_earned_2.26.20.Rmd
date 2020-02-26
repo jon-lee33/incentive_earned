@@ -1,0 +1,174 @@
+---
+title: "incentive_earned_2.26.20"
+author: "Jon"
+date: "2/26/2020"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 6
+    number_sections: true
+    toc_float: true
+    highlight: tango
+    theme: united
+---
+
+Calculate the incentives earned by participants.  Adds all ART initiation, ART, Motivational, PreART incentives for 8 incentive sites.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("/Users/jonkawatachi/Documents/Incentive data")
+
+#Package names
+packages <- c("ggplot2", "openxlsx", "tidyverse", "dplyr", "magrittr", "lubridate", "readxl", "foreign", "data.table", "haven", "knitr", "csv", "DT")
+# Install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+# Packages loading
+lapply(packages, library, character.only = TRUE)
+```
+
+***
+
+```{r include=FALSE}
+# Use file from Allison to get ART inititation date and Enrollment dates 
+cohort <- read_csv("/Users/jonkawatachi/Documents/alldata/alldata.csv")
+cohort <- filter(cohort, visitcode==0)
+cohort <- select(cohort, "studyid","enrolldt","artdt", "loc")
+```
+
+
+# ART INCENTIVE (150)
+```{r, echo=FALSE, warning=FALSE}
+# Import hiv file visit to get the artdt - ART refill
+beartincen <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/be_iccplus/artincenmaster.csv")
+bgartincen <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/bg_iccplus/artincenmaster.csv")
+bpartincen <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/bp_iccplus/artincenmaster.csv")
+mdartincen <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/md_iccplus/artincenmaster.csv")
+azartincen <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/az_iccplus/artincenmaster.csv")
+crartincen <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/cr_iccplus/artincenmaster.csv") 
+dhartincen <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/dh_iccplus/artincenmaster.csv")
+dmartincen <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/dm_iccplus/artincenmaster.csv")
+
+artincen<- rbind(crartincen,dhartincen,azartincen, dmartincen, beartincen, bgartincen, bpartincen, mdartincen)
+# prepare for merge
+artincen1 <- select(artincen, "art_inc_part_id","art_inc_q1", "art_inc_q2", "art_inc_q3", "art_inc_visitdate")
+# Drop if missing date (didn't earn the incentive?)
+artincen2 <- drop_na(artincen1, art_inc_q3)
+artincen2$studyid <- artincen2$art_inc_part_id
+unique_artincen_ids<- unique(artincen2$studyid)
+# Join with COHORT data
+artincen3 <- left_join(artincen2,cohort, by="studyid")
+artincen4 <- drop_na(artincen3, enrolldt)
+unique_artincen_ids<- unique(artincen4$studyid)
+# Add up all the incentives
+artincen5 <- artincen4 %>%
+  group_by(studyid) %>%
+  summarize(artinc_tot = sum(art_inc_q2))
+# Interactive table
+datatable(artincen5, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T) )
+```
+
+# ART INITIATION INCENTIVE (500)
+```{r, echo=FALSE}
+
+# Import hiv file visit to get the artdt - ART refill
+beartinit <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/be_iccplus/artinitiationincentmaster.csv")
+bgartinit <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/bg_iccplus/artinitiationincentmaster.csv")
+bpartinit <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/bp_iccplus/artinitiationincentmaster.csv")
+mdartinit <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/md_iccplus/artinitiationincentmaster.csv")
+azartinit <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/az_iccplus/artinitiationincentmaster.csv")
+crartinit <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/cr_iccplus/artinitiationincentmaster.csv") 
+dhartinit <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/dh_iccplus/artinitiationincentmaster.csv")
+dmartinit <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/dm_iccplus/artinitiationincentmaster.csv")
+
+artinit<- rbind(crartinit,dhartinit,azartinit, dmartinit, beartinit, bgartinit, bpartinit, mdartinit)
+# prepare for merge
+artinit1 <- select(artinit, "art_init_inc_part_id","art_init_inc_q1", "art_init_inc_q2", "art_init_inc_q3", "art_init_inc_visitdate")
+artinit2 <- drop_na(artinit1, art_init_inc_q2)
+artinit2$studyid <- artinit2$art_init_inc_part_id
+uniqueids<- unique(artinit2$studyid)
+artinit3 <- left_join(artinit2,cohort, by="studyid")
+# Interactive table
+datatable(artinit3, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T) )
+```
+
+# MOTIVATION INCENTIVE (100)
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+bemotinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/be_iccplus/motincenmaster.csv")
+bgmotinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/bg_iccplus/motincenmaster.csv")
+bpmotinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/bp_iccplus/motincenmaster.csv")
+mdmotinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/md_iccplus/motincenmaster.csv")
+azmotinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/az_iccplus/motincenmaster.csv")
+crmotinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/cr_iccplus/motincenmaster.csv") 
+dhmotinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/dh_iccplus/motincenmaster.csv")
+dmmotinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/dm_iccplus/motincenmaster.csv")
+
+motinc<- rbind(crmotinc,dhmotinc,azmotinc, dmmotinc, bemotinc, bgmotinc, bpmotinc, mdmotinc)
+# prepare for merge
+motinc1 <- select(motinc, "mot_inc_part_id","mot_inc_q1", "mot_inc_q2", "mot_inc_q3", "mot_inc_visitdate")
+motinc2 <- drop_na(motinc1, mot_inc_q3)
+motinc2$studyid <- motinc2$mot_inc_part_id
+
+motinc3 <- left_join(motinc2,cohort, by="studyid")
+motinc4 <- drop_na(motinc3, enrolldt)
+# Add up all the incentives
+motinc5 <- motinc4 %>%
+   group_by(studyid) %>%
+  summarize(motinc_tot = sum(mot_inc_q2))
+# Interactive table
+datatable(motinc5, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T) )
+```
+
+# PREARTINCEN MASTER (250)
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+bepreartinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/be_iccplus/preartincenmaster.csv")
+bgpreartinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/bg_iccplus/preartincenmaster.csv")
+bppreartinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/bp_iccplus/preartincenmaster.csv")
+mdpreartinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/md_iccplus/preartincenmaster.csv")
+azpreartinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/az_iccplus/preartincenmaster.csv")
+crpreartinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/cr_iccplus/preartincenmaster.csv") 
+dhpreartinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/dh_iccplus/preartincenmaster.csv")
+dmpreartinc <- read.csv("/Users/jonkawatachi/ICC-Scraper-master/dist/ICC_data/dm_iccplus/preartincenmaster.csv")
+
+preartinc<- rbind(crpreartinc,dhpreartinc,azpreartinc, dmpreartinc, bepreartinc, bgpreartinc, bppreartinc, mdpreartinc)
+# prepare for merge
+preartinc1 <- select(preartinc, "preart_inc_part_id","preart_inc_q1", "preart_inc_q2", "preart_inc_q3", "preart_inc_visitdate")
+preartinc2 <- drop_na(preartinc1, preart_inc_q3)
+preartinc2$studyid <- preartinc2$preart_inc_part_id
+
+preartinc3 <- left_join(preartinc2,cohort, by="studyid")
+preartinc4 <- drop_na(preartinc3, enrolldt)
+# Add up all the incentives
+preartinc5 <- preartinc4 %>%
+  group_by(studyid) %>%
+  summarize(preartinc_tot = sum(preart_inc_q2))
+# Interactive table
+datatable(preartinc5, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T) )
+```
+
+Delete extra objects in global environment
+```{r, echo=FALSE}
+rm(beartincen, bgartincen, bpartincen, mdartincen, azartincen, crartincen, dhartincen, dmartincen, beartinit, bgartinit, bpartinit, mdartinit, azartinit, crartinit, dhartinit, dmartinit, bemotinc, bgmotinc, bpmotinc, mdmotinc, azmotinc, crmotinc, dhmotinc, dmmotinc, bepreartinc, bgpreartinc, bppreartinc, mdpreartinc, azpreartinc, crpreartinc, dhpreartinc, dmpreartinc)
+```
+
+Merge all of the files together
+```{r, echo=FALSE}
+cohort1 <- left_join(cohort, artincen5, by="studyid")
+cohort2 <- left_join(cohort1, artinit3, by="studyid")
+cohort3 <- left_join(cohort2, motinc5, by="studyid")
+cohort4 <- left_join(cohort3, preartinc5, by="studyid")
+
+# New variable = total incentive earned
+cohort5 <- cohort4 %>% 
+  rowwise() %>%
+  mutate(total_incentive = sum(artinc_tot, art_init_inc_q2, motinc_tot, preartinc_tot, na.rm=TRUE))
+
+cohort5 <- select(cohort5, "studyid","artinc_tot", "art_init_inc_q2", "motinc_tot", "preartinc_tot", "total_incentive")
+# histogram of total incentives
+hist( cohort5$total_incentive[ !cohort5$total_incentive==0 ])
+# Interactive table
+datatable(cohort5, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T) )
+```
+
